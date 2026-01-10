@@ -31,22 +31,25 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock AudioContext
-(window as unknown as { AudioContext: unknown }).AudioContext = vi.fn().mockImplementation(() => ({
-  createBufferSource: vi.fn().mockReturnValue({
-    buffer: null,
-    connect: vi.fn(),
-    start: vi.fn(),
-    stop: vi.fn(),
-    playbackRate: { value: 1 },
-    detune: { value: 0 },
-  }),
-  createBuffer: vi.fn().mockReturnValue({
-    getChannelData: vi.fn().mockReturnValue(new Float32Array(1024)),
-    duration: 1,
-  }),
-  destination: {},
-  currentTime: 0,
-}));
+Object.defineProperty(window, 'AudioContext', {
+  writable: true,
+  value: vi.fn().mockImplementation(() => ({
+    createBufferSource: vi.fn().mockReturnValue({
+      buffer: null,
+      connect: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      playbackRate: { value: 1 },
+      detune: { value: 0 },
+    }),
+    createBuffer: vi.fn().mockReturnValue({
+      getChannelData: vi.fn().mockReturnValue(new Float32Array(1024)),
+      duration: 1,
+    }),
+    destination: {},
+    currentTime: 0,
+  })),
+});
 
 // Mock navigator.mediaDevices
 Object.defineProperty(navigator, 'mediaDevices', {
@@ -121,4 +124,8 @@ class MockFileReader {
   DONE = 2;
 }
 
-(global as unknown as { FileReader: typeof MockFileReader }).FileReader = MockFileReader;
+// Use Object.defineProperty for cleaner FileReader mock
+Object.defineProperty(global, 'FileReader', {
+  writable: true,
+  value: MockFileReader,
+});

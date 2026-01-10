@@ -1,6 +1,10 @@
 /**
  * Environment variable validation and access utilities
  * Provides type-safe access to environment variables with validation
+ * 
+ * Note: This project uses Vite's `define` option in vite.config.ts to replace
+ * process.env.API_KEY at build time. This is intentional and consistent with
+ * the existing codebase pattern (see services/geminiService.ts).
  */
 
 // Declare Vite's import.meta.env types
@@ -14,14 +18,23 @@ declare global {
   }
 }
 
+// Declare process.env for TypeScript (Vite replaces this at build time via define option)
+declare const process: {
+  env: {
+    API_KEY?: string;
+    GEMINI_API_KEY?: string;
+    NODE_ENV?: string;
+  };
+};
+
 /**
  * Validates that all required environment variables are set
- * Throws an error if any required variables are missing
+ * Logs a warning if any required variables are missing
  */
 export const validateEnv = (): void => {
   const missingVars: string[] = [];
   
-  // In production, API_KEY is required
+  // In production, API_KEY is required (this is replaced at build time by Vite)
   if (!process.env.API_KEY || process.env.API_KEY.trim() === '') {
     missingVars.push('API_KEY (GEMINI_API_KEY)');
   }
@@ -39,6 +52,7 @@ export const validateEnv = (): void => {
  * Returns null if not set
  */
 export const getApiKey = (): string | null => {
+  // process.env.API_KEY is replaced at build time by Vite
   const apiKey = process.env.API_KEY;
   if (!apiKey || apiKey.trim() === '') {
     return null;

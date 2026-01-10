@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { isDevelopment } from '../utils/env';
 
 interface Props {
   children: ReactNode;
@@ -66,7 +67,7 @@ export class ErrorBoundary extends Component<Props, State> {
               We apologize for the inconvenience. An unexpected error has occurred.
             </p>
             
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {isDevelopment() && this.state.error && (
               <div className="mb-6 p-4 bg-slate-900/50 rounded-xl text-left overflow-auto max-h-40">
                 <p className="text-red-400 font-mono text-sm">
                   {this.state.error.toString()}
