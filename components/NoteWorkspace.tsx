@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, StopCircle, Wand2, Loader2, BrainCircuit, Trash2, Sparkles, RefreshCw, AlertTriangle, Paperclip, FileText, X, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, BookOpen, Download, Printer, Code, Eye, Share2, UploadCloud } from 'lucide-react';
+import { Mic, Wand2, Loader2, BrainCircuit, Trash2, Sparkles, RefreshCw, AlertTriangle, Paperclip, FileText, X, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, BookOpen, Download, Printer, Code, Eye, UploadCloud } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeNote, generateStudyGuide, getFriendlyErrorMessage } from '../services/geminiService';
 import { addToHistory, getHistory } from '../services/historyService';
@@ -92,7 +92,7 @@ export const NoteWorkspace: React.FC = () => {
         const base64 = reader.result as string;
         localStorage.setItem('gemini_smart_audio', base64);
         setStorageWarning(null);
-      } catch (e) {
+      } catch {
         console.warn("Audio too large for local storage");
         setStorageWarning("Audio recording is too large to be saved for refresh. It will be lost if you switch tabs.");
       }
@@ -300,7 +300,6 @@ export const NoteWorkspace: React.FC = () => {
   };
 
   const handleDateClick = (day: number) => {
-      const selected = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
       const notes = history.filter(item => {
           const itemDate = new Date(item.timestamp);
           return itemDate.getDate() === day && 
@@ -735,17 +734,17 @@ export const NoteWorkspace: React.FC = () => {
               <div className={`prose prose-lg max-w-none leading-relaxed overflow-y-auto custom-scrollbar pr-2 ${mode === 'dark' ? 'prose-invert' : ''}`}>
                 <ReactMarkdown 
                   components={{
-                    h1: ({node, ...props}) => <h1 className={`text-4xl font-extrabold font-heading mb-8 pb-4 border-b ${mode === 'dark' ? `text-${theme}-400 border-white/10` : `text-${theme}-700 border-slate-200`}`} {...props} />,
-                    h2: ({node, ...props}) => <h2 className={`text-2xl font-bold font-heading mt-10 mb-5 ${mode === 'dark' ? `text-${theme}-300` : `text-${theme}-700`}`} {...props} />,
-                    h3: ({node, ...props}) => <h3 className={`text-xl font-bold font-heading mt-8 mb-4 ${mode === 'dark' ? 'text-slate-200' : 'text-slate-800'}`} {...props} />,
-                    ul: ({node, ...props}) => <ul className={`list-disc pl-6 space-y-3 my-6 ${mode === 'dark' ? 'text-slate-300' : 'text-slate-600'}`} {...props} />,
-                    ol: ({node, ...props}) => <ol className={`list-decimal pl-6 space-y-3 my-6 ${mode === 'dark' ? 'text-slate-300' : 'text-slate-600'}`} {...props} />,
-                    li: ({node, ...props}) => <li className="pl-1" {...props} />,
-                    strong: ({node, ...props}) => <strong className={`font-bold ${mode === 'dark' ? 'text-white' : 'text-slate-900'}`} {...props} />,
-                    p: ({node, ...props}) => <p className={`mb-6 ${mode === 'dark' ? 'text-slate-300' : 'text-slate-600'} leading-loose`} {...props} />,
-                    a: ({node, ...props}) => <a className={`font-semibold underline decoration-2 underline-offset-4 transition-colors ${mode === 'dark' ? `text-${theme}-400 hover:text-${theme}-300 decoration-${theme}-500/30` : `text-${theme}-600 hover:text-${theme}-700 decoration-${theme}-500/30`}`} target="_blank" rel="noopener noreferrer" {...props} />,
-                    blockquote: ({node, ...props}) => <blockquote className={`border-l-4 pl-6 italic my-8 py-2 ${mode === 'dark' ? `border-${theme}-500/50 text-slate-400 bg-white/5 rounded-r-xl` : `border-${theme}-500 text-slate-600 bg-slate-50 rounded-r-xl`}`} {...props} />,
-                    code: ({node, ...props}) => <code className={`font-mono text-sm px-1.5 py-0.5 rounded ${mode === 'dark' ? 'bg-black/30 text-slate-200' : 'bg-slate-100 text-slate-800'}`} {...props} />,
+                    h1: ({...props}) => <h1 className={`text-4xl font-extrabold font-heading mb-8 pb-4 border-b ${mode === 'dark' ? `text-${theme}-400 border-white/10` : `text-${theme}-700 border-slate-200`}`} {...props} />,
+                    h2: ({...props}) => <h2 className={`text-2xl font-bold font-heading mt-10 mb-5 ${mode === 'dark' ? `text-${theme}-300` : `text-${theme}-700`}`} {...props} />,
+                    h3: ({...props}) => <h3 className={`text-xl font-bold font-heading mt-8 mb-4 ${mode === 'dark' ? 'text-slate-200' : 'text-slate-800'}`} {...props} />,
+                    ul: ({...props}) => <ul className={`list-disc pl-6 space-y-3 my-6 ${mode === 'dark' ? 'text-slate-300' : 'text-slate-600'}`} {...props} />,
+                    ol: ({...props}) => <ol className={`list-decimal pl-6 space-y-3 my-6 ${mode === 'dark' ? 'text-slate-300' : 'text-slate-600'}`} {...props} />,
+                    li: ({...props}) => <li className="pl-1" {...props} />,
+                    strong: ({...props}) => <strong className={`font-bold ${mode === 'dark' ? 'text-white' : 'text-slate-900'}`} {...props} />,
+                    p: ({...props}) => <p className={`mb-6 ${mode === 'dark' ? 'text-slate-300' : 'text-slate-600'} leading-loose`} {...props} />,
+                    a: ({...props}) => <a className={`font-semibold underline decoration-2 underline-offset-4 transition-colors ${mode === 'dark' ? `text-${theme}-400 hover:text-${theme}-300 decoration-${theme}-500/30` : `text-${theme}-600 hover:text-${theme}-700 decoration-${theme}-500/30`}`} target="_blank" rel="noopener noreferrer" {...props} />,
+                    blockquote: ({...props}) => <blockquote className={`border-l-4 pl-6 italic my-8 py-2 ${mode === 'dark' ? `border-${theme}-500/50 text-slate-400 bg-white/5 rounded-r-xl` : `border-${theme}-500 text-slate-600 bg-slate-50 rounded-r-xl`}`} {...props} />,
+                    code: ({...props}) => <code className={`font-mono text-sm px-1.5 py-0.5 rounded ${mode === 'dark' ? 'bg-black/30 text-slate-200' : 'bg-slate-100 text-slate-800'}`} {...props} />,
                   }}
                 >
                   {result}

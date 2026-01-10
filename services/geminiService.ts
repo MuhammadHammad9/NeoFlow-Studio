@@ -8,7 +8,6 @@ const MODEL_THINKING = 'gemini-3-pro-preview';
 const MODEL_FAST = 'gemini-3-flash-preview';
 const MODEL_IMAGE = 'gemini-3-pro-preview';
 const MODEL_TTS = 'gemini-2.5-flash-preview-tts';
-const MODEL_AUDIO_PROCESS = 'gemini-3-pro-preview'; 
 
 export const getFriendlyErrorMessage = (error: any): string => {
   const msg = (error.message || error.toString()).toLowerCase();
