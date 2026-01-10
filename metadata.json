@@ -1,0 +1,7 @@
+{
+  "name": "NeoFlow Studio",
+  "description": "A comprehensive AI-powered workspace for note-taking, audio processing, image analysis, and speech generation using the latest Gemini models.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
