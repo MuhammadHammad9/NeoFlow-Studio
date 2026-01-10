@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 interface User {
   name: string;
   email: string;
+  avatar?: string; // Base64 string for profile picture
 }
 
 interface AuthContextType {
@@ -11,7 +12,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
-  updateProfile: (name: string, email: string) => Promise<void>;
+  updateProfile: (name: string, email: string, avatar?: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,7 +59,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Success
-        const sessionUser = { name: foundUser.name, email: foundUser.email };
+        const sessionUser = { 
+          name: foundUser.name, 
+          email: foundUser.email, 
+          avatar: foundUser.avatar 
+        };
         localStorage.setItem('neoflow_session', JSON.stringify(sessionUser));
         setUser(sessionUser);
         setIsAuthenticated(true);
@@ -79,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const newUser = { name, email, password }; // Note: In a real backend, strictly hash passwords.
+        const newUser = { name, email, password }; 
         users.push(newUser);
         localStorage.setItem('neoflow_users', JSON.stringify(users));
 
@@ -93,10 +98,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const updateProfile = async (name: string, email: string) => {
+  const updateProfile = async (name: string, email: string, avatar?: string) => {
     return new Promise<void>((resolve) => {
       setTimeout(() => {
-        const updatedUser = { name, email };
+        const updatedUser = { ...user, name, email, avatar };
         setUser(updatedUser);
         localStorage.setItem('neoflow_session', JSON.stringify(updatedUser));
         
@@ -106,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             let users = JSON.parse(storedUsers);
             const userIndex = users.findIndex((u: any) => u.email === user.email);
             if (userIndex !== -1) {
-                users[userIndex] = { ...users[userIndex], name, email };
+                users[userIndex] = { ...users[userIndex], name, email, avatar };
                 localStorage.setItem('neoflow_users', JSON.stringify(users));
             }
         }

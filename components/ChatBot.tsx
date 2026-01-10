@@ -20,7 +20,7 @@ export const ChatBot: React.FC = () => {
   const textPrimary = mode === 'dark' ? 'text-white' : 'text-slate-900';
   const textSecondary = mode === 'dark' ? 'text-slate-400' : 'text-slate-500';
   const cardClass = mode === 'dark' 
-    ? 'bg-slate-950/40 border border-white/10 backdrop-blur-xl' 
+    ? 'bg-slate-950/40 border border-white/10 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)]' 
     : 'bg-white/80 border border-white/60 shadow-xl backdrop-blur-xl';
 
   // Load chat history on mount
@@ -163,7 +163,7 @@ export const ChatBot: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)]">
+    <div className="flex flex-col h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] animate-fade-in-up">
       <header className="mb-6 flex-shrink-0 flex items-center justify-between">
          <div>
              <h1 className={`text-3xl font-bold font-heading ${textPrimary} mb-2 flex items-center gap-3 tracking-tight`}>
@@ -174,7 +174,7 @@ export const ChatBot: React.FC = () => {
          </div>
          <button
             onClick={handleClearChat}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-colors border font-semibold text-sm ${mode === 'dark' ? 'text-slate-400 hover:text-red-400 hover:bg-slate-800 border-transparent hover:border-slate-700' : 'text-slate-500 hover:text-red-600 hover:bg-slate-100 border-transparent hover:border-slate-200'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl transition-all border font-semibold text-sm hover:scale-105 active:scale-95 ${mode === 'dark' ? 'text-slate-400 hover:text-red-400 hover:bg-slate-800 border-transparent hover:border-slate-700' : 'text-slate-500 hover:text-red-600 hover:bg-slate-100 border-transparent hover:border-slate-200'}`}
             title="Clear Chat History"
          >
             <Trash2 className="w-4 h-4" />
@@ -182,17 +182,17 @@ export const ChatBot: React.FC = () => {
          </button>
       </header>
 
-      <div className={`flex-1 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl relative ${cardClass}`}>
+      <div className={`flex-1 rounded-[2.5rem] overflow-hidden flex flex-col relative ${cardClass}`}>
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth custom-scrollbar">
-          {messages.map((msg) => (
+          {messages.map((msg, index) => (
             <div
               key={msg.id}
-              className={`flex items-start gap-5 max-w-4xl animate-fade-in-up ${
+              className={`flex items-start gap-5 max-w-4xl animate-slide-in-right ${
                 msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
               }`}
             >
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg transition-transform hover:scale-110 ${
                 msg.role === 'user' 
                   ? `bg-gradient-to-br from-${theme}-500 to-${theme}-600` 
                   : (msg.isError ? 'bg-red-500' : `bg-gradient-to-br from-emerald-500 to-emerald-600`)
@@ -200,12 +200,12 @@ export const ChatBot: React.FC = () => {
                 {msg.role === 'user' ? <User className="w-5 h-5 text-white" /> : (msg.isError ? <AlertCircle className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-white" />)}
               </div>
               
-              <div className={`rounded-3xl px-6 py-5 shadow-sm text-[1.05rem] leading-relaxed ${
+              <div className={`rounded-3xl px-6 py-5 shadow-sm text-[1.05rem] leading-relaxed relative group transition-all duration-300 ${
                 msg.role === 'user' 
-                  ? `bg-${theme}-600 text-white rounded-tr-sm shadow-${theme}-500/20` 
+                  ? `bg-${theme}-600 text-white rounded-tr-sm shadow-${theme}-500/20 hover:shadow-${theme}-500/30` 
                   : (msg.isError 
                       ? 'bg-red-500/10 text-red-500 border border-red-500/20 rounded-tl-sm' 
-                      : (mode === 'dark' ? 'bg-slate-800 text-slate-200 border border-slate-700/50 rounded-tl-sm shadow-[0_4px_20px_rgba(0,0,0,0.2)]' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-sm shadow-[0_4px_20px_rgba(0,0,0,0.03)]'))
+                      : (mode === 'dark' ? 'bg-slate-800 text-slate-200 border border-slate-700/50 rounded-tl-sm shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:border-slate-600' : 'bg-white text-slate-700 border border-slate-100 rounded-tl-sm shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-md'))
               }`}>
                 <div className="prose prose-sm md:prose-base max-w-none break-words">
                    <ReactMarkdown 
@@ -249,7 +249,7 @@ export const ChatBot: React.FC = () => {
         </div>
 
         {/* Input Area */}
-        <div className={`p-4 md:p-6 border-t z-20 ${mode === 'dark' ? 'bg-slate-900/50 border-white/5' : 'bg-white/50 border-slate-100'}`}>
+        <div className={`p-4 md:p-6 border-t z-20 backdrop-blur-md ${mode === 'dark' ? 'bg-slate-900/50 border-white/5' : 'bg-white/50 border-slate-100'}`}>
           <form onSubmit={handleSend} className="relative max-w-5xl mx-auto flex items-end gap-3">
              <div className="relative flex-1 group">
                 <input
@@ -257,7 +257,7 @@ export const ChatBot: React.FC = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={isListening ? "Listening..." : "Ask NeoFlow anything..."}
-                  className={`w-full border-none rounded-3xl pl-6 pr-14 py-4 text-lg transition-all shadow-lg focus:ring-2 focus:ring-${theme}-500 ${mode === 'dark' ? 'bg-slate-800 text-white placeholder-slate-500 group-hover:bg-slate-700/80' : 'bg-white text-slate-800 placeholder-slate-400 group-hover:bg-slate-50 ring-1 ring-slate-200'} ${isListening ? 'ring-2 ring-red-500/50' : ''}`}
+                  className={`w-full border-none rounded-3xl pl-6 pr-14 py-4 text-lg transition-all shadow-lg focus:ring-2 focus:ring-${theme}-500 focus:shadow-${theme}-500/20 ${mode === 'dark' ? 'bg-slate-800 text-white placeholder-slate-500 group-hover:bg-slate-700/80' : 'bg-white text-slate-800 placeholder-slate-400 group-hover:bg-slate-50 ring-1 ring-slate-200'} ${isListening ? 'ring-2 ring-red-500/50' : ''}`}
                   disabled={isLoading}
                 />
                 
@@ -265,10 +265,10 @@ export const ChatBot: React.FC = () => {
                   type="button"
                   onClick={handleVoiceInput}
                   disabled={isLoading || isListening}
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full transition-colors ${
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 p-2.5 rounded-full transition-all ${
                     isListening 
                       ? 'text-red-500 bg-red-500/10 animate-pulse' 
-                      : `text-slate-400 hover:text-${theme}-500 ${mode === 'dark' ? 'hover:bg-slate-600' : 'hover:bg-slate-100'}`
+                      : `text-slate-400 hover:text-${theme}-500 hover:scale-110 ${mode === 'dark' ? 'hover:bg-slate-600' : 'hover:bg-slate-100'}`
                   }`}
                   title="Voice Input"
                 >
@@ -279,7 +279,7 @@ export const ChatBot: React.FC = () => {
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className={`flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg hover:scale-105 active:scale-95 ${!input.trim() || isLoading ? (mode === 'dark' ? 'bg-slate-800 text-slate-600' : 'bg-slate-200 text-slate-400') : `bg-gradient-to-br from-${theme}-500 to-${theme}-600 text-white shadow-${theme}-500/25`}`}
+              className={`flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-lg hover:scale-110 active:scale-95 ${!input.trim() || isLoading ? (mode === 'dark' ? 'bg-slate-800 text-slate-600' : 'bg-slate-200 text-slate-400') : `bg-gradient-to-br from-${theme}-500 to-${theme}-600 text-white shadow-${theme}-500/25`}`}
             >
               {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6 ml-0.5" />}
             </button>

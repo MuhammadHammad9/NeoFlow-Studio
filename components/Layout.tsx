@@ -19,6 +19,15 @@ const THEME_OPTIONS: { id: ThemeColor; label: string; colorClass: string }[] = [
   { id: 'orange', label: 'Orange', colorClass: 'bg-orange-500' },
 ];
 
+// Exact colors for dynamic background injection
+const THEME_HEX: Record<ThemeColor, string> = {
+  emerald: '#10b981',
+  blue: '#3b82f6',
+  cyan: '#06b6d4',
+  red: '#ef4444',
+  orange: '#f97316',
+};
+
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { theme, setTheme, mode, toggleMode } = useTheme();
   const { logout, user } = useAuth();
@@ -43,29 +52,24 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-        // Ctrl+Space for Search
         if (e.ctrlKey && e.code === 'Space') {
             e.preventDefault();
             setIsSearchOpen(true);
             setTimeout(() => searchInputRef.current?.focus(), 100);
         }
-        // Ctrl+N for New Note (Navigate)
         if (e.ctrlKey && e.code === 'KeyN') {
             e.preventDefault();
             onTabChange(ActiveTab.NOTES);
         }
-        // Ctrl+S for Save (Mock)
         if (e.ctrlKey && e.code === 'KeyS') {
             e.preventDefault();
             setShowSaveToast(true);
             setTimeout(() => setShowSaveToast(false), 2000);
         }
-        // Esc to close search
         if (e.code === 'Escape' && isSearchOpen) {
             setIsSearchOpen(false);
         }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onTabChange, isSearchOpen]);
@@ -95,30 +99,38 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Dynamic Background Logic
-  const getBackgroundClass = () => {
-    if (mode === 'dark') {
-      // Changed to strictly use theme colors for the dark gradient as requested
-      // from-black via-{theme}-950/40 to-{theme}-900/50
-      return `bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-black via-${theme}-950/40 to-${theme}-900/50`;
-    } else {
-      return `bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-slate-50 via-white to-${theme}-50`;
-    }
-  };
-
   const glassCardClass = mode === 'dark' 
-    ? 'bg-slate-950/60 border-r border-white/5 backdrop-blur-xl' 
-    : 'bg-white/70 border-r border-slate-200/60 shadow-xl backdrop-blur-xl';
+    ? 'bg-slate-950/70 border-r border-white/5 backdrop-blur-2xl shadow-[5px_0_30px_rgba(0,0,0,0.3)]' 
+    : 'bg-white/70 border-r border-slate-200/60 shadow-[5px_0_30px_rgba(0,0,0,0.03)] backdrop-blur-2xl';
 
   const textPrimary = mode === 'dark' ? 'text-slate-100' : 'text-slate-800';
   const textSecondary = mode === 'dark' ? 'text-slate-400' : 'text-slate-500';
   
+  // Dynamic Background Style Generation
+  const activeColor = THEME_HEX[theme];
+  const backgroundStyle = {
+      backgroundColor: mode === 'dark' ? '#020617' : '#f8fafc',
+      backgroundImage: mode === 'dark' 
+          ? `
+              radial-gradient(circle at 50% -20%, ${activeColor}40, transparent 70%),
+              radial-gradient(circle at 90% 90%, ${activeColor}15, transparent 50%)
+            ` 
+          : `
+              radial-gradient(circle at 50% -10%, ${activeColor}20, transparent 60%),
+              radial-gradient(circle at 10% 90%, ${activeColor}10, transparent 50%)
+            `
+  };
+
   return (
-    <div className={`flex h-screen overflow-hidden transition-colors duration-500 ease-in-out font-sans ${getBackgroundClass()}`}>
+    <div 
+      className="flex h-screen overflow-hidden transition-colors duration-700 ease-in-out font-sans relative"
+      style={backgroundStyle}
+    >
+      
       {/* Save Toast */}
       {showSaveToast && (
-          <div className="fixed top-5 right-5 z-[100] animate-fade-in-up bg-emerald-500 text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 font-medium">
-              <Sparkles className="w-4 h-4" />
+          <div className={`fixed top-5 right-5 z-[100] animate-fade-in-up px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 font-bold border backdrop-blur-md bg-${theme}-500 text-white border-${theme}-400/50 shadow-${theme}-500/20`}>
+              <Sparkles className="w-5 h-5 animate-pulse" />
               Workspace Saved
           </div>
       )}
@@ -126,7 +138,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       {/* Global Search Modal */}
       {isSearchOpen && (
           <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 animate-in fade-in duration-200">
-              <div className={`w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh] ${mode === 'dark' ? 'bg-slate-900 border border-white/10' : 'bg-white'}`}>
+              <div className={`w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh] transition-all duration-300 animate-scale-in ${mode === 'dark' ? 'bg-slate-900 border border-white/10' : 'bg-white'}`}>
                   <div className="p-4 border-b border-slate-200/10 flex items-center gap-3">
                       <Search className={`w-5 h-5 ${textSecondary}`} />
                       <input 
@@ -152,12 +164,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                               <p>Type to search across your workspace history.</p>
                           </div>
                       )}
-                      {searchResults.map((result) => (
+                      {searchResults.map((result, idx) => (
                           <button 
                              key={result.id} 
-                             className={`w-full text-left p-3 rounded-xl flex items-center gap-3 transition-colors ${mode === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
+                             className={`w-full text-left p-3 rounded-xl flex items-center gap-3 transition-all duration-200 group ${mode === 'dark' ? 'hover:bg-white/5' : 'hover:bg-slate-50'}`}
+                             style={{ animationDelay: `${idx * 0.05}s` }}
                              onClick={() => {
-                                 // Simple navigation logic based on type
                                  if (result.type === 'NOTE') onTabChange(ActiveTab.NOTES);
                                  if (result.type === 'CHAT') onTabChange(ActiveTab.CHAT);
                                  if (result.type === 'IMAGE') onTabChange(ActiveTab.IMAGES);
@@ -165,14 +177,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                                  setIsSearchOpen(false);
                              }}
                           >
-                              <div className={`p-2 rounded-lg ${mode === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`}>
+                              <div className={`p-2 rounded-lg transition-transform group-hover:scale-110 ${mode === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`}>
                                   {result.type === 'NOTE' && <NotebookPen className="w-4 h-4 text-purple-500" />}
                                   {result.type === 'CHAT' && <MessageSquareText className="w-4 h-4 text-emerald-500" />}
                                   {result.type === 'IMAGE' && <ImageIcon className="w-4 h-4 text-blue-500" />}
                                   {result.type === 'TTS' && <Podcast className="w-4 h-4 text-orange-500" />}
                               </div>
                               <div className="flex-1 min-w-0">
-                                  <div className={`font-medium truncate ${textPrimary}`}>{result.title}</div>
+                                  <div className={`font-medium truncate ${textPrimary} group-hover:text-${theme}-500 transition-colors`}>{result.title}</div>
                                   <div className={`text-xs truncate ${textSecondary}`}>{result.preview}</div>
                               </div>
                               <span className={`text-[10px] ${textSecondary}`}>{new Date(result.timestamp).toLocaleDateString()}</span>
@@ -192,14 +204,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         
         {/* Header / Logo Area */}
         <div 
-          className={`h-24 flex items-center justify-center lg:justify-between lg:px-8 cursor-pointer relative z-20 group transition-colors select-none`}
+          className={`h-24 flex items-center justify-center lg:justify-between lg:px-8 cursor-pointer relative z-20 group transition-all duration-300 select-none`}
           onClick={() => setIsPickerOpen(!isPickerOpen)}
           ref={pickerRef}
           title="Change Theme"
         >
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-2xl bg-gradient-to-br from-${theme}-400 to-${theme}-600 shadow-lg shadow-${theme}-500/20 ring-1 ring-white/10`}>
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className={`p-2.5 rounded-2xl bg-gradient-to-br from-${theme}-400 to-${theme}-600 shadow-lg shadow-${theme}-500/20 ring-1 ring-white/10 group-hover:shadow-${theme}-500/40 transition-shadow duration-300`}>
+              <Sparkles className="w-6 h-6 text-white animate-pulse-slow" />
             </div>
             <span className={`hidden lg:block font-heading font-bold text-xl tracking-tight ${textPrimary}`}>NeoFlow</span>
           </div>
@@ -243,9 +255,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         <div className="px-3 lg:px-6 mb-2">
             <button 
                 onClick={() => { setIsSearchOpen(true); setTimeout(() => searchInputRef.current?.focus(), 100); }}
-                className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all border ${mode === 'dark' ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all border group ${mode === 'dark' ? 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/10' : 'bg-slate-50 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
             >
-                <Search className="w-5 h-5 lg:w-4 lg:h-4" />
+                <Search className="w-5 h-5 lg:w-4 lg:h-4 group-hover:scale-110 transition-transform" />
                 <span className="hidden lg:block text-sm font-medium">Search...</span>
                 <span className="hidden lg:block ml-auto text-[10px] font-mono border rounded px-1.5 py-0.5 opacity-60">Ctrl + Spc</span>
             </button>
@@ -256,35 +268,41 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             
-            // Dynamic Active/Inactive Styles
+            // Refined Active State for "Real" Feel
             let activeClass = '';
             let inactiveClass = '';
             
             if (mode === 'dark') {
-               activeClass = `bg-${theme}-500/10 text-${theme}-300 ring-1 ring-${theme}-500/20 shadow-[0_0_15px_rgba(0,0,0,0.2)]`;
-               inactiveClass = 'text-slate-400 hover:bg-white/5 hover:text-slate-200 hover:translate-x-1';
+               activeClass = `bg-white/5 text-white shadow-[0_0_20px_rgba(0,0,0,0.2)] border border-${theme}-500/30`;
+               inactiveClass = 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent';
             } else {
-               activeClass = `bg-${theme}-50 text-${theme}-700 ring-1 ring-${theme}-500/20 shadow-sm`;
-               inactiveClass = 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 hover:translate-x-1';
+               activeClass = `bg-white text-slate-900 shadow-md border border-slate-100`;
+               inactiveClass = 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
             }
 
             return (
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-center lg:justify-start px-3 lg:px-5 py-4 rounded-2xl transition-all duration-300 group relative overflow-hidden ${isActive ? activeClass : inactiveClass}`}
+                className={`w-full flex items-center justify-center lg:justify-start px-3 lg:px-4 py-3.5 rounded-2xl transition-all duration-300 group relative overflow-hidden ${isActive ? activeClass : inactiveClass}`}
               >
-                <Icon className={`w-5 h-5 relative z-10 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                <span className={`hidden lg:block ml-4 font-semibold text-sm relative z-10 font-heading tracking-wide`}>
+                <div className={`p-1.5 rounded-lg mr-3 transition-colors ${isActive ? `bg-${theme}-500 text-white` : 'bg-transparent text-current'}`}>
+                    <Icon className={`w-5 h-5 relative z-10`} />
+                </div>
+                <span className={`hidden lg:block font-semibold text-sm relative z-10 font-heading tracking-wide`}>
                   {item.label}
                 </span>
-                {isActive && <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-10 rounded-r-full bg-${theme}-500 shadow-[0_0_10px_var(--${theme}-500)]`} />}
+                
+                {/* Active Indicator Line */}
+                {isActive && (
+                    <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full bg-${theme}-500 shadow-[0_0_10px_${activeColor}]`} />
+                )}
               </button>
             );
           })}
         </nav>
         
-        <div className={`p-6 mx-4 mb-4 rounded-3xl ${mode === 'dark' ? 'bg-white/5 border border-white/5' : 'bg-slate-50 border border-slate-100'}`}>
+        <div className={`p-6 mx-4 mb-4 rounded-3xl backdrop-blur-md ${mode === 'dark' ? 'bg-white/5 border border-white/5' : 'bg-slate-50 border border-slate-100'}`}>
            <div className="flex items-center justify-center lg:justify-between">
               <div className="hidden lg:flex flex-col min-w-0">
                 <span className={`text-sm font-bold ${textPrimary} truncate`}>{user?.name}</span>

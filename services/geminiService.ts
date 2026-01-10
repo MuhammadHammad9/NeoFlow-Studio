@@ -8,7 +8,6 @@ const MODEL_THINKING = 'gemini-3-pro-preview';
 const MODEL_FAST = 'gemini-3-flash-preview';
 const MODEL_IMAGE = 'gemini-3-pro-preview';
 const MODEL_TTS = 'gemini-2.5-flash-preview-tts';
-// Use flash for general audio processing if not strictly "thinking" required, but pro is better for complex analysis
 const MODEL_AUDIO_PROCESS = 'gemini-3-pro-preview'; 
 
 export const getFriendlyErrorMessage = (error: any): string => {
@@ -72,9 +71,7 @@ export const analyzeNote = async (
     };
     
     if (useThinking) {
-      // Required for Thinking Mode
       config.thinkingConfig = { thinkingBudget: 32768 };
-      // Do not set maxOutputTokens when using thinking budget as per guidelines
     }
 
     const response = await ai.models.generateContent({
@@ -174,22 +171,28 @@ export const generateSpeech = async (text: string, voiceName: string = 'Kore') =
 
 export const generateStudyGuide = async (content: string) => {
   try {
+    const currentYear = new Date().getFullYear();
+    const promptText = `Convert the following notes into a comprehensive, university-grade study guide.
+    
+    Content to process:
+    ${content}
+    
+    Requirements:
+    1. 'latexCode': Generate valid, compilable LaTeX source code using the 'article' class.
+       - Use \\usepackage{fancyhdr}
+       - Use \\pagestyle{fancy}
+       - Clear defaults: \\fancyhf{}
+       - Header Left: \\lhead{\\textbf{NeoFlow Studio}}
+       - Footer Center: \\cfoot{\\small \\copyright ${currentYear} NeoFlow Rights Reserved}
+       - Use clear sections, itemize/enumerate for lists, and text formatting.
+       - Ensure all backslashes are properly escaped in the JSON output.
+    2. 'markdownContent': Generate a Markdown version that mimics the structure for web display.
+    
+    Return strict JSON. Do NOT include markdown code blocks.`;
+
     const response = await ai.models.generateContent({
       model: MODEL_FAST,
-      contents: `Convert the following notes into a comprehensive, university-grade study guide. 
-      
-      Content to process:
-      ${content}
-      
-      Requirements:
-      1. 'latexCode': Generate valid, compilable LaTeX source code using the 'article' class. 
-         - Include \usepackage{fancyhdr} for headers/footers.
-         - Header Left: "NeoFlow Studio"
-         - Footer Center: "© ${new Date().getFullYear()} NeoFlow Rights Reserved"
-         - Use clear sections, itemize for lists, and text formatting.
-      2. 'markdownContent': Generate a Markdown version that is optimized for reading on the web but mimics the structure of the LaTeX document. 
-         - Use # for Title, ## for Sections.
-         - Make it look professional.`,
+      contents: promptText,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -203,7 +206,20 @@ export const generateStudyGuide = async (content: string) => {
       }
     });
 
-    return JSON.parse(response.text || "{}");
+    let jsonString = response.text || "{}";
+    
+    // 1. Remove Markdown code blocks if present
+    if (jsonString.includes("```")) {
+      jsonString = jsonString.replace(/```json/g, "").replace(/```/g, "");
+    }
+
+    // 2. Locate the JSON object if there's surrounding text
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[0];
+    }
+
+    return JSON.parse(jsonString);
   } catch (error) {
     console.error("Study guide generation error:", error);
     throw error;

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme, ThemeColor } from '../contexts/ThemeContext';
-import { User, Mail, LogOut, Moon, Sun, Shield, Sparkles, Check, Smartphone, Save } from 'lucide-react';
+import { User, Mail, LogOut, Moon, Sun, Shield, Sparkles, Check, Smartphone, Save, Camera, Upload } from 'lucide-react';
+import { blobToBase64 } from '../utils/audioUtils';
 
 const THEME_OPTIONS: { id: ThemeColor; label: string; colorClass: string }[] = [
   { id: 'emerald', label: 'Emerald', colorClass: 'bg-emerald-500' },
@@ -19,17 +20,47 @@ export const SettingsView: React.FC = () => {
       name: user?.name || '',
       email: user?.email || ''
   });
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(user?.avatar);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name,
+        email: user.email
+      });
+      setAvatarPreview(user.avatar);
+    }
+  }, [user]);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB Limit
+        alert("Image is too large. Please choose an image under 2MB.");
+        return;
+      }
+      try {
+        const base64 = await blobToBase64(file);
+        const fullBase64 = `data:${file.type};base64,${base64}`;
+        setAvatarPreview(fullBase64);
+      } catch (err) {
+        console.error("Failed to process image", err);
+      }
+    }
+  };
+
   const handleSaveProfile = async () => {
       setIsSaving(true);
       setSaveMessage(null);
-      await updateProfile(formData.name, formData.email);
+      await updateProfile(formData.name, formData.email, avatarPreview);
       setIsSaving(false);
       setSaveMessage("Profile updated successfully.");
       setTimeout(() => setSaveMessage(null), 3000);
@@ -55,10 +86,35 @@ export const SettingsView: React.FC = () => {
           <div className={`absolute top-0 left-0 w-full h-40 bg-gradient-to-r from-${theme}-500/20 to-transparent`}></div>
           
           <div className="relative flex flex-col md:flex-row gap-10 items-start">
-            <div className="flex-shrink-0">
-              <div className={`w-32 h-32 rounded-[2rem] bg-gradient-to-br from-${theme}-500 to-${theme}-700 flex items-center justify-center text-4xl font-bold text-white shadow-2xl shadow-${theme}-500/30 border-4 ${mode === 'dark' ? 'border-slate-950' : 'border-white'}`}>
-                {user?.name ? getInitials(user.name) : <User />}
+            <div className="flex-shrink-0 relative group">
+              <div className={`w-32 h-32 rounded-[2rem] bg-gradient-to-br from-${theme}-500 to-${theme}-700 flex items-center justify-center text-4xl font-bold text-white shadow-2xl shadow-${theme}-500/30 border-4 ${mode === 'dark' ? 'border-slate-950' : 'border-white'} overflow-hidden relative`}>
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  user?.name ? getInitials(user.name) : <User />
+                )}
+                
+                {/* Upload Overlay */}
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <Camera className="w-8 h-8 text-white" />
+                </button>
               </div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                className="hidden" 
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className={`absolute -bottom-3 -right-3 p-2.5 rounded-xl shadow-lg border-2 ${mode === 'dark' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-white text-slate-700'}`}
+              >
+                <Upload className="w-4 h-4" />
+              </button>
             </div>
             
             <div className="flex-1 space-y-8 w-full">

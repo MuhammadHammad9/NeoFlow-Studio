@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, StopCircle, Wand2, Loader2, BrainCircuit, Trash2, Sparkles, RefreshCw, AlertTriangle, Paperclip, FileText, X, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, BookOpen, Download, Printer, Code, Eye, Share2 } from 'lucide-react';
+import { Mic, StopCircle, Wand2, Loader2, BrainCircuit, Trash2, Sparkles, RefreshCw, AlertTriangle, Paperclip, FileText, X, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, BookOpen, Download, Printer, Code, Eye, Share2, UploadCloud } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeNote, generateStudyGuide, getFriendlyErrorMessage } from '../services/geminiService';
 import { addToHistory, getHistory } from '../services/historyService';
@@ -18,6 +18,10 @@ export const NoteWorkspace: React.FC = () => {
   const [result, setResult] = useState<string | null>(null);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Drag and Drop State
+  const [isDragging, setIsDragging] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   
   // Calendar State
   const [showCalendar, setShowCalendar] = useState(false);
@@ -151,19 +155,42 @@ export const NoteWorkspace: React.FC = () => {
     localStorage.removeItem('gemini_smart_audio');
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const validateAndSetFile = (file: File) => {
     setError(null);
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      
-      // Basic validation
-      if (file.size > 20 * 1024 * 1024) { // 20MB limit
+    // Basic validation
+    if (file.size > 20 * 1024 * 1024) { // 20MB limit
         setError("File is too large. Please upload a file smaller than 20MB.");
         if (fileInputRef.current) fileInputRef.current.value = '';
         return;
-      }
+    }
+    setAttachment(file);
+  };
 
-      setAttachment(file);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      validateAndSetFile(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        validateAndSetFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -225,10 +252,10 @@ export const NoteWorkspace: React.FC = () => {
           const contentToProcess = result || note;
           const data = await generateStudyGuide(contentToProcess);
           setStudyGuideData(data);
-      } catch (e) {
+      } catch (e: any) {
           console.error(e);
-          setError("Failed to generate study guide. Please try again.");
-          setShowStudyGuide(false);
+          // Set error but do NOT close the modal, so user can see what happened
+          setError(`Failed to generate study guide: ${e.message || "Unknown error"}`);
       } finally {
           setIsGeneratingGuide(false);
       }
@@ -240,13 +267,27 @@ export const NoteWorkspace: React.FC = () => {
 
   const handleDownloadLatex = () => {
       if (!studyGuideData) return;
-      const element = document.createElement("a");
-      const file = new Blob([studyGuideData.latexCode], {type: 'text/plain'});
-      element.href = URL.createObjectURL(file);
-      element.download = "neoflow_study_guide.tex";
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
+      
+      try {
+          // Create blob with correct MIME type for LaTeX
+          const blob = new Blob([studyGuideData.latexCode], { type: 'application/x-tex' });
+          const url = URL.createObjectURL(blob);
+          
+          const element = document.createElement("a");
+          element.href = url;
+          const filename = `neoflow_study_guide_${Date.now()}.tex`;
+          element.download = filename;
+          
+          document.body.appendChild(element);
+          element.click();
+          
+          // Cleanup
+          document.body.removeChild(element);
+          setTimeout(() => URL.revokeObjectURL(url), 100);
+      } catch (err) {
+          console.error("Download failed:", err);
+          setError("Failed to download file. Please try copying the source code manually.");
+      }
   };
 
   // Calendar Helpers
@@ -276,7 +317,7 @@ export const NoteWorkspace: React.FC = () => {
 
   return (
     <div className="space-y-8 relative">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in-up">
         <div>
           <h1 className={`text-5xl font-extrabold font-heading ${textPrimary} mb-3 tracking-tight`}>Smart Workspace</h1>
           <p className={`${textSecondary} text-lg max-w-2xl`}>Draft notes, record audio, upload files, and let NeoFlow organize them into structured insights.</p>
@@ -284,7 +325,7 @@ export const NoteWorkspace: React.FC = () => {
         <div className="flex items-center gap-3">
             <button 
                 onClick={() => setShowCalendar(!showCalendar)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all border font-medium ${showCalendar ? `bg-${theme}-500 text-white border-${theme}-600` : (mode === 'dark' ? 'bg-slate-800/50 text-slate-300 border-slate-700' : 'bg-white text-slate-600 border-slate-200')}`}
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all border font-medium hover:scale-105 active:scale-95 ${showCalendar ? `bg-${theme}-500 text-white border-${theme}-600 shadow-lg shadow-${theme}-500/30` : (mode === 'dark' ? 'bg-slate-800/50 text-slate-300 border-slate-700 hover:border-slate-500' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm')}`}
             >
                 <CalendarIcon className="w-4 h-4" />
                 <span>{showCalendar ? 'Hide Calendar' : 'View Calendar'}</span>
@@ -292,7 +333,7 @@ export const NoteWorkspace: React.FC = () => {
             {(note || audioBlob || result || attachment) && (
             <button 
                 onClick={handleClearAll}
-                className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all border font-medium ${mode === 'dark' ? 'bg-slate-800/50 hover:bg-red-900/20 text-slate-300 hover:text-red-400 border-slate-700 hover:border-red-800/50' : 'bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border-slate-200 hover:border-red-200 shadow-sm'}`}
+                className={`flex items-center gap-2 px-5 py-3 rounded-2xl transition-all border font-medium hover:scale-105 active:scale-95 ${mode === 'dark' ? 'bg-slate-800/50 hover:bg-red-900/20 text-slate-300 hover:text-red-400 border-slate-700 hover:border-red-800/50' : 'bg-white hover:bg-red-50 text-slate-600 hover:text-red-600 border-slate-200 hover:border-red-200 shadow-sm'}`}
             >
                 <RefreshCw className="w-4 h-4" />
                 <span className="hidden sm:inline">Reset</span>
@@ -303,13 +344,25 @@ export const NoteWorkspace: React.FC = () => {
 
       {/* Study Guide Modal / Compiler View */}
       {showStudyGuide && (
-          <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 print:p-0 print:bg-white print:fixed print:inset-0">
-             <div className="w-full max-w-5xl h-[90vh] bg-slate-100 dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col print:h-full print:w-full print:bg-white print:shadow-none print:rounded-none">
+          <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 print:p-0 print:bg-white print:fixed print:inset-0 animate-in fade-in zoom-in-95 duration-200">
+             
+             {/* Error Message Inside Modal */}
+             {error && (
+                <div className="absolute top-10 left-1/2 -translate-x-1/2 z-[70] bg-red-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 border border-white/20 animate-fade-in-up">
+                    <AlertCircle className="w-6 h-6 flex-shrink-0" />
+                    <span className="font-medium">{error}</span>
+                    <button onClick={() => setError(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+             )}
+
+             <div className="w-full max-w-5xl h-[90vh] bg-slate-100 dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col print:h-full print:w-full print:bg-white print:shadow-none print:rounded-none relative border border-white/10">
                 
                 {/* Header - Hidden in Print */}
-                <div className="p-4 border-b dark:border-white/10 flex items-center justify-between bg-white dark:bg-slate-800 print:hidden">
+                <div className="p-4 border-b dark:border-white/10 flex items-center justify-between bg-white dark:bg-slate-800 print:hidden z-10 relative shadow-sm">
                     <div className="flex items-center gap-3">
-                       <div className={`p-2 rounded-xl bg-${theme}-500 text-white`}>
+                       <div className={`p-2 rounded-xl bg-${theme}-500 text-white shadow-lg shadow-${theme}-500/30`}>
                           <BookOpen className="w-5 h-5" />
                        </div>
                        <h2 className="text-xl font-bold font-heading dark:text-white">NeoFlow Study Compiler</h2>
@@ -320,13 +373,13 @@ export const NoteWorkspace: React.FC = () => {
                         <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl mr-4">
                            <button 
                              onClick={() => setViewMode('compiled')}
-                             className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${viewMode === 'compiled' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}
+                             className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${viewMode === 'compiled' ? 'bg-white dark:bg-slate-600 shadow-md transform scale-105 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}
                            >
                               <Eye className="w-4 h-4" /> Compiled
                            </button>
                            <button 
                              onClick={() => setViewMode('source')}
-                             className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${viewMode === 'source' ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}
+                             className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${viewMode === 'source' ? 'bg-white dark:bg-slate-600 shadow-md transform scale-105 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900'}`}
                            >
                               <Code className="w-4 h-4" /> LaTeX Source
                            </button>
@@ -334,10 +387,11 @@ export const NoteWorkspace: React.FC = () => {
 
                         {studyGuideData && (
                             <>
-                                <button onClick={handleDownloadLatex} className="p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white bg-slate-100 dark:bg-slate-700 rounded-lg" title="Download .tex">
-                                    <Download className="w-5 h-5" />
+                                <button onClick={handleDownloadLatex} className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors font-medium text-sm" title="Download .tex Source">
+                                    <Download className="w-4 h-4" />
+                                    <span className="hidden sm:inline">.tex</span>
                                 </button>
-                                <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/20">
+                                <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95">
                                     <Printer className="w-4 h-4" />
                                     <span>Print / Save PDF</span>
                                 </button>
@@ -350,69 +404,71 @@ export const NoteWorkspace: React.FC = () => {
                 </div>
 
                 {/* Content Area */}
-                <div className="flex-1 overflow-auto p-4 md:p-8 bg-slate-200/50 dark:bg-black/20 print:p-0 print:bg-white print:overflow-visible">
+                <div className="flex-1 overflow-auto p-4 md:p-8 bg-slate-200/50 dark:bg-black/40 print:p-0 print:bg-white print:overflow-visible">
                     {isGeneratingGuide ? (
                         <div className="h-full flex flex-col items-center justify-center">
-                            <Loader2 className={`w-12 h-12 text-${theme}-500 animate-spin mb-4`} />
-                            <p className="text-lg font-medium dark:text-white animate-pulse">Compiling study materials...</p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Converting to LaTeX format & structuring content</p>
+                            <div className={`w-16 h-16 border-4 border-${theme}-500/30 border-t-${theme}-500 rounded-full animate-spin mb-6`}></div>
+                            <p className="text-xl font-bold dark:text-white animate-pulse">Compiling study materials...</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Converting notes to LaTeX format & structuring content</p>
                         </div>
                     ) : studyGuideData ? (
                         viewMode === 'compiled' ? (
                             // Simulated LaTeX View
-                            <div className="max-w-[210mm] min-h-[297mm] mx-auto bg-white shadow-xl print:shadow-none p-[20mm] font-serif text-slate-900 relative">
-                                {/* Header */}
-                                <div className="border-b-2 border-slate-900 pb-4 mb-8 flex justify-between items-end">
-                                    <div>
-                                        <h1 className="text-3xl font-bold tracking-tight mb-1">Study Guide</h1>
-                                        <p className="text-sm uppercase tracking-widest text-slate-500">Generated by NeoFlow Studio</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                         <Sparkles className={`w-6 h-6 text-${theme}-500`} />
-                                         <span className="font-bold text-xl tracking-tighter">NeoFlow</span>
-                                    </div>
+                            <div className="max-w-[210mm] min-h-[297mm] mx-auto bg-white shadow-2xl print:shadow-none p-[20mm] font-serif text-slate-900 relative flex flex-col transform transition-transform animate-scale-in">
+                                {/* Visual Header for Compiled View */}
+                                <div className="border-b border-black mb-8 flex justify-between items-end pb-2">
+                                    <div className="font-bold text-lg">NeoFlow Studio</div>
+                                    <div className="text-sm italic">Study Guide</div>
                                 </div>
                                 
                                 {/* Content - Using specific styles to mimic LaTeX */}
-                                <div className="prose prose-slate max-w-none text-justify print:prose-sm leading-relaxed">
+                                <div className="prose prose-slate max-w-none text-justify print:prose-sm leading-relaxed flex-1">
                                     <style>{`
-                                        .prose h1 { font-family: 'EB Garamond', serif; font-size: 24pt; margin-top: 2em; margin-bottom: 1em; border-bottom: 1px solid #eee; padding-bottom: 0.5em; }
-                                        .prose h2 { font-family: 'EB Garamond', serif; font-size: 18pt; margin-top: 1.5em; font-weight: 600; }
-                                        .prose h3 { font-family: 'EB Garamond', serif; font-size: 14pt; margin-top: 1.2em; font-style: italic; }
-                                        .prose p { margin-bottom: 1em; text-indent: 1.5em; }
+                                        .prose h1 { font-family: 'EB Garamond', serif; font-size: 24pt; margin-top: 2em; margin-bottom: 1em; text-align: center; color: black; }
+                                        .prose h2 { font-family: 'EB Garamond', serif; font-size: 16pt; margin-top: 1.5em; font-weight: 700; border-bottom: 1px solid #000; padding-bottom: 4px; color: black; }
+                                        .prose h3 { font-family: 'EB Garamond', serif; font-size: 14pt; margin-top: 1.2em; font-weight: 600; color: black; }
+                                        .prose p { margin-bottom: 1em; text-indent: 1.5em; color: black; }
                                         .prose p:first-of-type { text-indent: 0; }
-                                        .prose ul, .prose ol { margin-bottom: 1em; padding-left: 2em; }
+                                        .prose ul, .prose ol { margin-bottom: 1em; padding-left: 2em; color: black; }
                                         .prose li { margin-bottom: 0.5em; }
-                                        .prose strong { font-weight: 700; color: #1a202c; }
+                                        .prose strong { font-weight: 700; color: #000; }
                                     `}</style>
                                     <ReactMarkdown>{studyGuideData.markdownContent}</ReactMarkdown>
                                 </div>
 
-                                {/* Footer */}
-                                <div className="mt-16 pt-8 border-t border-slate-200 text-center text-xs text-slate-400 font-mono print:fixed print:bottom-4 print:left-0 print:right-0 print:border-none">
-                                    <p>© {new Date().getFullYear()} NeoFlow Rights Reserved • Generated with Gemini 3.0</p>
+                                {/* Visual Footer for Compiled View */}
+                                <div className="mt-8 pt-2 border-t border-black text-center text-sm">
+                                    <p>© {new Date().getFullYear()} NeoFlow Rights Reserved</p>
                                 </div>
                             </div>
                         ) : (
                             // Source Code View
-                            <div className="max-w-4xl mx-auto h-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg bg-slate-900 print:hidden">
-                                <div className="bg-slate-950 p-2 px-4 flex justify-between items-center border-b border-slate-800">
+                            <div className="max-w-4xl mx-auto h-full rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg bg-slate-900 print:hidden flex flex-col animate-scale-in">
+                                <div className="bg-slate-950 p-3 px-4 flex justify-between items-center border-b border-slate-800">
                                    <span className="text-xs font-mono text-slate-400">main.tex</span>
                                    <button 
                                       onClick={() => navigator.clipboard.writeText(studyGuideData.latexCode)}
-                                      className="text-xs text-emerald-400 hover:text-emerald-300"
+                                      className="text-xs text-emerald-400 hover:text-emerald-300 font-medium px-2 py-1 rounded hover:bg-white/5 transition-colors"
                                    >
-                                      Copy Code
+                                      Copy to Clipboard
                                    </button>
                                 </div>
-                                <pre className="p-4 text-sm font-mono text-slate-300 overflow-auto h-[calc(100%-40px)] custom-scrollbar">
+                                <pre className="flex-1 p-6 text-sm font-mono text-slate-300 overflow-auto custom-scrollbar leading-relaxed">
                                     {studyGuideData.latexCode}
                                 </pre>
                             </div>
                         )
                     ) : (
-                        <div className="flex items-center justify-center h-full text-slate-500">
-                             Failed to load data.
+                        <div className="flex flex-col items-center justify-center h-full text-slate-500 dark:text-slate-400 space-y-4">
+                             <AlertTriangle className="w-12 h-12 opacity-50" />
+                             <p className="text-lg font-medium">No content generated.</p>
+                             <p className="max-w-md text-center text-sm opacity-80">Try adjusting your notes or check your internet connection and try again.</p>
+                             <button 
+                               onClick={() => setShowStudyGuide(false)} 
+                               className="px-6 py-2 bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
+                             >
+                                Close
+                             </button>
                         </div>
                     )}
                 </div>
@@ -476,7 +532,8 @@ export const NoteWorkspace: React.FC = () => {
           </div>
       )}
 
-      {error && (
+      {/* Main Error Alert (Only visible if modal is closed) */}
+      {error && !showStudyGuide && (
         <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 flex items-start gap-4 text-red-500 animate-fade-in-up backdrop-blur-sm">
           <AlertCircle className="w-6 h-6 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -496,11 +553,26 @@ export const NoteWorkspace: React.FC = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         {/* Input Section */}
-        <div className="space-y-6">
-          <div className={`rounded-[2rem] p-8 relative flex flex-col h-[600px] transition-all duration-300 ${cardClass}`}>
+        <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+          <div 
+             className={`rounded-[2rem] p-8 relative flex flex-col h-[600px] transition-all duration-300 ${cardClass} ${isDragging ? `ring-2 ring-${theme}-500 ring-offset-2 ring-offset-${mode === 'dark' ? 'black' : 'white'}` : ''} ${isFocused ? `ring-1 ring-${theme}-500/30 shadow-[0_0_20px_rgba(var(--${theme}-500),0.1)]` : ''}`}
+             onDragOver={handleDragOver}
+             onDragLeave={handleDragLeave}
+             onDrop={handleDrop}
+          >
+            {isDragging && (
+                <div className={`absolute inset-0 z-50 rounded-[2rem] backdrop-blur-sm flex flex-col items-center justify-center animate-fade-in-up ${mode === 'dark' ? 'bg-slate-900/80' : 'bg-white/80'}`}>
+                    <UploadCloud className={`w-16 h-16 text-${theme}-500 mb-4 animate-bounce`} />
+                    <p className={`text-2xl font-bold font-heading text-${theme}-500`}>Drop file to upload</p>
+                    <p className={`mt-2 ${textSecondary}`}>PDF, TXT, MD, CSV, JSON, Images</p>
+                </div>
+            )}
+
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               placeholder="Start typing your notes, thoughts or prompt here..."
               className={`flex-1 w-full border-none resize-none focus:ring-0 ${textPrimary} placeholder-slate-400/60 text-xl leading-relaxed mb-6 ${inputBg} font-sans`}
             />
@@ -511,7 +583,7 @@ export const NoteWorkspace: React.FC = () => {
                   {!isRecording ? (
                     <button
                       onClick={startRecording}
-                      className={`flex items-center space-x-2.5 px-5 py-2.5 rounded-2xl transition-all duration-200 text-sm font-semibold border ${mode === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/5' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}`}
+                      className={`flex items-center space-x-2.5 px-5 py-2.5 rounded-2xl transition-all duration-200 text-sm font-semibold border hover:scale-105 active:scale-95 ${mode === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/5' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}`}
                     >
                       <Mic className="w-4 h-4" />
                       <span>Record Audio</span>
@@ -519,20 +591,24 @@ export const NoteWorkspace: React.FC = () => {
                   ) : (
                     <button
                       onClick={stopRecording}
-                      className="flex items-center space-x-2.5 px-5 py-2.5 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all text-sm font-semibold animate-pulse border border-red-500/20 ring-2 ring-red-500/10"
+                      className="flex items-center space-x-2.5 px-5 py-2.5 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all text-sm font-semibold animate-pulse border border-red-500/20 ring-2 ring-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
                     >
                       <StopCircle className="w-4 h-4" />
                       <span>Stop Recording</span>
                     </button>
                   )}
 
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`flex items-center space-x-2.5 px-5 py-2.5 rounded-2xl transition-all duration-200 text-sm font-semibold border ${mode === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/5' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}`}
-                  >
-                    <Paperclip className="w-4 h-4" />
-                    <span>Upload File</span>
-                  </button>
+                  <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`flex items-center space-x-2.5 px-5 py-2.5 rounded-2xl transition-all duration-200 text-sm font-semibold border hover:scale-105 active:scale-95 ${mode === 'dark' ? 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/5' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'}`}
+                      >
+                        <Paperclip className="w-4 h-4" />
+                        <span>Upload File</span>
+                      </button>
+                      <span className="text-[10px] opacity-50 uppercase tracking-wider font-bold">Max 20MB</span>
+                  </div>
+                  
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -579,12 +655,12 @@ export const NoteWorkspace: React.FC = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-5">
-             <label className={`w-full sm:w-auto flex items-center justify-between sm:justify-start space-x-4 cursor-pointer p-4 rounded-2xl transition-all border ${isThinkingMode ? (mode === 'dark' ? `bg-${theme}-900/20 border-${theme}-500/30 shadow-[0_0_15px_rgba(var(--${theme}-500),0.1)]` : `bg-${theme}-50 border-${theme}-200 shadow-sm`) : 'bg-transparent border-transparent'}`}>
+             <label className={`w-full sm:w-auto flex items-center justify-between sm:justify-start space-x-4 cursor-pointer p-4 rounded-2xl transition-all border group ${isThinkingMode ? (mode === 'dark' ? `bg-${theme}-900/20 border-${theme}-500/30 shadow-[0_0_15px_rgba(var(--${theme}-500),0.1)]` : `bg-${theme}-50 border-${theme}-200 shadow-sm`) : 'bg-transparent border-transparent hover:bg-white/5'}`}>
                 <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-xl ${isThinkingMode ? `bg-${theme}-500/20 text-${theme}-500` : `bg-slate-500/10 text-slate-500`}`}>
+                  <div className={`p-2 rounded-xl transition-colors ${isThinkingMode ? `bg-${theme}-500/20 text-${theme}-500` : `bg-slate-500/10 text-slate-500 group-hover:bg-slate-500/20`}`}>
                      <BrainCircuit className="w-5 h-5" />
                   </div>
-                  <span className={`text-base font-semibold ${isThinkingMode ? (mode === 'dark' ? `text-${theme}-300` : `text-${theme}-700`) : textSecondary}`}>Deep Thinking</span>
+                  <span className={`text-base font-semibold transition-colors ${isThinkingMode ? (mode === 'dark' ? `text-${theme}-300` : `text-${theme}-700`) : textSecondary}`}>Deep Thinking</span>
                 </div>
                 <div className="relative">
                   <input 
@@ -601,7 +677,7 @@ export const NoteWorkspace: React.FC = () => {
              <button
               onClick={handleProcess}
               disabled={isProcessing || (!note && !audioBlob && !attachment)}
-              className={`w-full sm:flex-1 h-[68px] flex items-center justify-center space-x-3 text-white rounded-2xl font-bold text-lg shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] ${isProcessing || (!note && !audioBlob && !attachment) ? 'bg-slate-500/30 cursor-not-allowed text-slate-400' : `bg-gradient-to-r from-${theme}-600 to-${theme}-500 hover:to-${theme}-400 shadow-${theme}-500/30`}`}
+              className={`w-full sm:flex-1 h-[68px] flex items-center justify-center space-x-3 text-white rounded-2xl font-bold text-lg shadow-lg transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden ${isProcessing || (!note && !audioBlob && !attachment) ? 'bg-slate-500/30 cursor-not-allowed text-slate-400' : `bg-gradient-to-r from-${theme}-600 to-${theme}-500 hover:to-${theme}-400 shadow-${theme}-500/30`}`}
             >
               {isProcessing ? (
                 <>
@@ -610,6 +686,7 @@ export const NoteWorkspace: React.FC = () => {
                 </>
               ) : (
                 <>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] animate-shimmer" />
                   <Wand2 className="w-6 h-6" />
                   <span>Process with NeoFlow</span>
                 </>
@@ -619,10 +696,10 @@ export const NoteWorkspace: React.FC = () => {
         </div>
 
         {/* Output Section */}
-        <div className={`rounded-[2rem] p-8 md:p-10 min-h-[600px] relative overflow-hidden flex flex-col ${cardClass}`}>
+        <div className={`rounded-[2rem] p-8 md:p-10 min-h-[600px] relative overflow-hidden flex flex-col animate-fade-in-up ${cardClass}`} style={{ animationDelay: '0.2s' }}>
           {!result && !isProcessing && (
             <div className={`absolute inset-0 flex flex-col items-center justify-center ${textSecondary}`}>
-              <div className={`w-24 h-24 mb-6 rounded-full bg-gradient-to-b from-white/5 to-white/0 flex items-center justify-center border border-white/5`}>
+              <div className={`w-24 h-24 mb-6 rounded-full bg-gradient-to-b from-white/5 to-white/0 flex items-center justify-center border border-white/5 animate-float`}>
                  <Sparkles className="w-10 h-10 opacity-30" />
               </div>
               <p className="text-xl font-heading font-medium tracking-tight">AI insights will appear here.</p>
@@ -648,7 +725,7 @@ export const NoteWorkspace: React.FC = () => {
               <div className="flex justify-end mb-6">
                  <button 
                     onClick={handleGenerateStudyGuide}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${mode === 'dark' ? `bg-${theme}-500/20 text-${theme}-400 hover:bg-${theme}-500/30` : `bg-${theme}-50 text-${theme}-700 hover:bg-${theme}-100`}`}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-105 active:scale-95 ${mode === 'dark' ? `bg-${theme}-500/20 text-${theme}-400 hover:bg-${theme}-500/30` : `bg-${theme}-50 text-${theme}-700 hover:bg-${theme}-100`}`}
                  >
                     <BookOpen className="w-4 h-4" />
                     Save as Study Guide
