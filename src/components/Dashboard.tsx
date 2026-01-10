@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { HistoryItem, ActiveTab } from '../types';
 import { getHistory, getStats, clearHistoryLog } from '../services/historyService';
+import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, 
   Clock, 
@@ -21,6 +22,21 @@ interface DashboardProps {
     onNavigate: (tab: ActiveTab) => void;
 }
 
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemAnim = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { user } = useAuth();
   const { theme, mode } = useTheme();
@@ -29,13 +45,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   useEffect(() => {
     // Initial load
-    setHistory(getHistory());
-    setStats(getStats());
+    const fetchData = async () => {
+        try {
+            const h = await getHistory();
+            const s = await getStats();
+            setHistory(h);
+            setStats(s);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+    fetchData();
 
     // Listen for updates
     const handleUpdate = () => {
-      setHistory(getHistory());
-      setStats(getStats());
+        fetchData();
     };
 
     window.addEventListener('historyUpdated', handleUpdate);
@@ -59,9 +83,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     : 'bg-white/80 border border-white/60 shadow-xl shadow-slate-200/50 backdrop-blur-xl';
 
   const StatCard = ({ icon: Icon, label, value, onClick }: any) => (
-    <button 
+    <motion.button
+        variants={itemAnim}
+        whileHover={{ scale: 1.02, y: -5 }}
+        whileTap={{ scale: 0.98 }}
         onClick={onClick}
-        className={`group p-6 rounded-[2rem] flex items-center justify-between transition-all duration-300 hover:-translate-y-1 ${cardClass} text-left w-full hover:shadow-2xl hover:border-${theme}-500/30 relative overflow-hidden`}
+        className={`group p-6 rounded-[2rem] flex items-center justify-between ${cardClass} text-left w-full hover:shadow-2xl hover:border-${theme}-500/30 relative overflow-hidden`}
     >
         <div className="relative z-10">
             <p className={`text-xs font-bold uppercase tracking-wider ${textSecondary} mb-2 font-heading`}>{label}</p>
@@ -72,34 +99,59 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
         {/* Hover Glow */}
         <div className={`absolute inset-0 bg-gradient-to-r from-transparent via-${theme}-500/10 to-transparent -translate-x-full group-hover:animate-shimmer pointer-events-none`}></div>
-    </button>
+    </motion.button>
   );
 
   return (
-    <div className="space-y-10">
+    <motion.div
+      className="space-y-10"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
       {/* Hero Section */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 animate-fade-in-up">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-           <div className="flex items-center gap-2 mb-2">
+           <motion.div
+             initial={{ opacity: 0, x: -20 }}
+             animate={{ opacity: 1, x: 0 }}
+             transition={{ delay: 0.2 }}
+             className="flex items-center gap-2 mb-2"
+           >
                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${mode === 'dark' ? `bg-${theme}-500/10 text-${theme}-400 border border-${theme}-500/20` : `bg-${theme}-50 text-${theme}-700 border border-${theme}-200`}`}>
                   Dashboard
                </span>
-           </div>
-           <h1 className={`text-5xl lg:text-6xl font-extrabold font-heading ${textPrimary} tracking-tight`}>
+           </motion.div>
+           <motion.h1
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.3 }}
+             className={`text-5xl lg:text-6xl font-extrabold font-heading ${textPrimary} tracking-tight`}
+           >
              Hello, {user?.name.split(' ')[0]}
-           </h1>
-           <p className={`mt-3 text-xl ${textSecondary} font-light`}>
+           </motion.h1>
+           <motion.p
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.4 }}
+             className={`mt-3 text-xl ${textSecondary} font-light`}
+           >
              Here is an overview of your creative workspace and recent activity.
-           </p>
+           </motion.p>
         </div>
-        <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border ${mode === 'dark' ? 'border-white/10 bg-white/5 text-slate-300 shadow-inner' : 'border-slate-200 bg-white text-slate-600 shadow-sm'}`}>
+        <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+            className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border ${mode === 'dark' ? 'border-white/10 bg-white/5 text-slate-300 shadow-inner' : 'border-slate-200 bg-white text-slate-600 shadow-sm'}`}
+        >
             <Calendar className="w-4 h-4" />
             <span className="text-sm font-medium">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-        </div>
+        </motion.div>
       </header>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard 
             icon={NotebookPen} 
             label="Smart Notes" 
@@ -127,9 +179,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       </div>
 
       {/* Main Content Split */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
          {/* History Timeline */}
-         <div className={`xl:col-span-2 rounded-[2.5rem] p-8 md:p-10 ${cardClass} min-h-[500px] flex flex-col relative overflow-hidden`}>
+         <motion.div
+            variants={itemAnim}
+            className={`xl:col-span-2 rounded-[2.5rem] p-8 md:p-10 ${cardClass} min-h-[500px] flex flex-col relative overflow-hidden`}
+         >
             {/* Header */}
             <div className="flex items-center justify-between mb-8 relative z-10">
                <div className="flex items-center gap-4">
@@ -151,13 +206,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4 relative z-10">
                 {history.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-center">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex flex-col items-center justify-center h-64 text-center"
+                    >
                         <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${mode === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`}>
                             <Clock className={`w-8 h-8 ${textSecondary}`} />
                         </div>
                         <p className={`text-lg font-medium ${textPrimary}`}>No activity yet</p>
                         <p className={`text-sm ${textSecondary}`}>Start creating notes, chatting, or analyzing images.</p>
-                    </div>
+                    </motion.div>
                 ) : (
                     history.map((item, index) => {
                         let Icon = Activity;
@@ -170,10 +229,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         }
 
                         return (
-                            <div 
+                            <motion.div
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.05 }}
                                 key={item.id} 
-                                className={`group p-5 rounded-2xl border transition-all duration-300 hover:scale-[1.01] animate-fade-in-up ${mode === 'dark' ? 'bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10' : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm hover:shadow-md'}`}
-                                style={{ animationDelay: `${index * 0.05}s` }}
+                                className={`group p-5 rounded-2xl border transition-all duration-300 hover:scale-[1.01] ${mode === 'dark' ? 'bg-white/5 border-white/5 hover:border-white/10 hover:bg-white/10' : 'bg-white border-slate-100 hover:border-slate-200 shadow-sm hover:shadow-md'}`}
                             >
                                 <div className="flex items-start gap-4">
                                     <div className={`p-3 rounded-xl flex-shrink-0 transition-transform group-hover:scale-110 ${mode === 'dark' ? `bg-${theme}-500/10 text-${theme}-500` : `bg-${theme}-50 text-${theme}-600`}`}>
@@ -187,16 +248,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                                         <p className={`text-sm leading-relaxed line-clamp-2 ${textSecondary}`}>{item.preview}</p>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         );
                     })
                 )}
             </div>
-         </div>
+         </motion.div>
 
          {/* Quick Actions / Highlights */}
          <div className="flex flex-col gap-6">
-            <div className={`rounded-[2.5rem] p-8 ${cardClass} flex-1 flex flex-col justify-center`}>
+            <motion.div
+                variants={itemAnim}
+                className={`rounded-[2.5rem] p-8 ${cardClass} flex-1 flex flex-col justify-center`}
+            >
                 <h2 className={`text-xl font-bold font-heading mb-6 ${textPrimary}`}>Quick Start</h2>
                 <div className="space-y-4">
                     <button 
@@ -241,9 +305,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         <ArrowRight className={`w-4 h-4 opacity-50 transition-transform group-hover:translate-x-1 ${mode === 'dark' ? 'text-white' : 'text-slate-900'}`} />
                     </button>
                 </div>
-            </div>
+            </motion.div>
 
-            <div className={`rounded-[2.5rem] p-8 relative overflow-hidden bg-gradient-to-br from-${theme}-600 to-${theme}-900 shadow-2xl text-white group shadow-${theme}-500/20`}>
+            <motion.div
+                variants={itemAnim}
+                className={`rounded-[2.5rem] p-8 relative overflow-hidden bg-gradient-to-br from-${theme}-600 to-${theme}-900 shadow-2xl text-white group shadow-${theme}-500/20`}
+            >
                 <div className="relative z-10">
                     <h3 className="text-2xl font-bold font-heading mb-2 flex items-center gap-2">
                         Pro Tip <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
@@ -261,9 +328,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 {/* Decorative Elements */}
                 <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-white/10 blur-2xl group-hover:scale-125 transition-transform duration-700"></div>
                 <div className="absolute top-10 right-10 w-20 h-20 rounded-full bg-white/10 blur-2xl animate-pulse-slow"></div>
-            </div>
+            </motion.div>
          </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

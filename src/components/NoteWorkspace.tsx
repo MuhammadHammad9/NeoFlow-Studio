@@ -4,10 +4,12 @@ import ReactMarkdown from 'react-markdown';
 import { analyzeNote, generateStudyGuide, getFriendlyErrorMessage } from '../services/geminiService';
 import { addToHistory, getHistory } from '../services/historyService';
 import { useTheme } from '../contexts/ThemeContext';
+import { useToast } from '../contexts/ToastContext';
 import { HistoryItem } from '../types';
 
 export const NoteWorkspace: React.FC = () => {
   const { theme, mode } = useTheme();
+  const { addToast } = useToast();
   const [note, setNote] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -70,7 +72,9 @@ export const NoteWorkspace: React.FC = () => {
     }
     
     // Load History for Calendar
-    setHistory(getHistory().filter(item => item.type === 'NOTE'));
+    getHistory().then(h => {
+        setHistory(h.filter(item => item.type === 'NOTE'));
+    });
   }, []);
 
   // Save note on change
@@ -229,11 +233,20 @@ export const NoteWorkspace: React.FC = () => {
       
       // Log to history
       const title = note ? note.substring(0, 30) + (note.length > 30 ? '...' : '') : (attachment ? `File: ${attachment.name}` : 'Audio Note');
-      addToHistory('NOTE', title, responseText);
-      setHistory(getHistory().filter(item => item.type === 'NOTE')); // Update local history
+
+      // We wait for the add operation to ensure consistency
+      await addToHistory('NOTE', title, responseText);
+
+      // Refresh local history view (might need to fetch again if using async state)
+      const freshHistory = await getHistory();
+      setHistory(freshHistory.filter(item => item.type === 'NOTE'));
+
+      addToast("Note processed successfully", "success");
     } catch (e) {
       console.error(e);
-      setError(getFriendlyErrorMessage(e));
+      const msg = getFriendlyErrorMessage(e);
+      setError(msg);
+      addToast(msg, "error");
     } finally {
       setIsProcessing(false);
     }
