@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Wand2, Loader2, BrainCircuit, Trash2, Sparkles, RefreshCw, AlertTriangle, Paperclip, FileText, X, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, BookOpen, Download, Printer, Code, Eye, UploadCloud } from 'lucide-react';
+import { Mic, Wand2, Loader2, BrainCircuit, Trash2, Sparkles, RefreshCw, AlertTriangle, Paperclip, FileText, X, AlertCircle, Calendar as CalendarIcon, ChevronLeft, ChevronRight, BookOpen, Download, Printer, Code, Eye, UploadCloud, StopCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeNote, generateStudyGuide, getFriendlyErrorMessage } from '../services/geminiService';
 import { addToHistory, getHistory } from '../services/historyService';
