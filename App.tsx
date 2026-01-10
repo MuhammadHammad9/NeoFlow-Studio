@@ -7,6 +7,7 @@ import { SpeechGenerator } from './components/SpeechGenerator';
 import { SettingsView } from './components/SettingsView';
 import { Dashboard } from './components/Dashboard';
 import { AuthScreen } from './components/AuthScreen';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ActiveTab } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -47,10 +48,12 @@ const MainApp = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <MainApp />
-      </ThemeProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ThemeProvider>
+          <MainApp />
+        </ThemeProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
