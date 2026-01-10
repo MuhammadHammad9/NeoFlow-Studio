@@ -8,12 +8,19 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  name      String
-  createdAt DateTime  @default(now())
-  history   History[]
+  id          String    @id @default(uuid())
+  email       String?   @unique
+  password    String?
+  name        String?
+  avatar      String?
+
+  // Social IDs
+  googleId    String?   @unique
+  instagramId String?   @unique
+  twitterId   String?   @unique
+
+  createdAt   DateTime  @default(now())
+  history     History[]
 }
 
 model History {

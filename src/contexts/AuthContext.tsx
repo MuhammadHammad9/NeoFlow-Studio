@@ -13,6 +13,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  checkUrlParams: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,6 +51,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     initAuth();
   }, []);
+
+  const checkUrlParams = () => {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      if (token) {
+          localStorage.setItem('token', token);
+          setAuthToken(token);
+          // Clear URL
+          window.history.replaceState({}, document.title, "/");
+          // Force reload or just state update? State update is better but need to fetch user
+          // For simplicity, let's fetch user immediately
+          axios.get('/api/auth/me').then(res => {
+              setUser(res.data.user);
+              setIsAuthenticated(true);
+          }).catch(err => {
+              console.error("Invalid token from URL", err);
+              logout();
+          });
+      }
+  };
 
   const login = async (email: string, password: string) => {
       try {
@@ -91,7 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout, checkUrlParams }}>
       {children}
     </AuthContext.Provider>
   );

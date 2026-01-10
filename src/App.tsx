@@ -22,8 +22,13 @@ const LoadingSpinner = () => (
 );
 
 const MainApp = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, checkUrlParams } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>(ActiveTab.DASHBOARD);
+
+  // Check for token in URL on mount (OAuth callback)
+  React.useEffect(() => {
+      checkUrlParams();
+  }, [checkUrlParams]);
 
   if (!isAuthenticated) {
     return <AuthScreen />;

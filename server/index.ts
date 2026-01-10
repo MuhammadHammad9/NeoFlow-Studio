@@ -4,6 +4,7 @@ import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import passport from './config/passport';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -12,6 +13,7 @@ const SECRET_KEY = process.env.SECRET_KEY || 'your-secret-key-change-it';
 
 app.use(cors());
 app.use(express.json());
+app.use(passport.initialize());
 
 // Middleware to authenticate
 const authenticateToken = (req: any, res: any, next: any) => {
@@ -63,7 +65,7 @@ app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     try {
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) {
+        if (!user || !user.password) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
@@ -81,6 +83,40 @@ app.post('/api/auth/login', async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
+
+// --- SOCIAL AUTH ROUTES ---
+
+const handleSocialCallback = (req: any, res: any) => {
+    // User is authenticated via Passport at this point
+    const user = req.user;
+    if (!user) return res.redirect('/?error=auth_failed');
+
+    const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: '7d' });
+
+    // Redirect to frontend with token
+    res.redirect(`/?token=${token}`);
+};
+
+// Google
+app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+app.get('/api/auth/google/callback',
+    passport.authenticate('google', { session: false, failureRedirect: '/?error=auth_failed' }),
+    handleSocialCallback
+);
+
+// Instagram
+app.get('/api/auth/instagram', passport.authenticate('instagram'));
+app.get('/api/auth/instagram/callback',
+    passport.authenticate('instagram', { session: false, failureRedirect: '/?error=auth_failed' }),
+    handleSocialCallback
+);
+
+// Twitter
+app.get('/api/auth/twitter', passport.authenticate('twitter'));
+app.get('/api/auth/twitter/callback',
+    passport.authenticate('twitter', { session: false, failureRedirect: '/?error=auth_failed' }),
+    handleSocialCallback
+);
 
 // Me (Restore session)
 app.get('/api/auth/me', authenticateToken, async (req: any, res) => {
