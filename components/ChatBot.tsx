@@ -185,7 +185,7 @@ export const ChatBot: React.FC = () => {
       <div className={`flex-1 rounded-[2.5rem] overflow-hidden flex flex-col relative ${cardClass}`}>
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth custom-scrollbar">
-          {messages.map((msg, index) => (
+          {messages.map((msg) => (
             <div
               key={msg.id}
               className={`flex items-start gap-5 max-w-4xl animate-slide-in-right ${
@@ -210,11 +210,11 @@ export const ChatBot: React.FC = () => {
                 <div className="prose prose-sm md:prose-base max-w-none break-words">
                    <ReactMarkdown 
                     components={{
-                       p: ({node, ...props}) => <p className="mb-3 last:mb-0" {...props} />,
-                       strong: ({node, ...props}) => <strong className="font-bold inherit" {...props} />,
-                       a: ({node, ...props}) => <a className="underline hover:opacity-80 inherit decoration-2 underline-offset-2" target="_blank" {...props} />,
-                       code: ({node, ...props}) => <code className={`font-mono text-sm px-1.5 py-0.5 rounded ${msg.role === 'user' ? `bg-${theme}-700/50` : (mode === 'dark' ? 'bg-black/30' : 'bg-slate-100')}`} {...props} />,
-                       pre: ({node, ...props}) => <pre className={`p-3 rounded-xl my-2 overflow-x-auto ${msg.role === 'user' ? `bg-${theme}-800/50` : (mode === 'dark' ? 'bg-black/40' : 'bg-slate-100')}`} {...props} />
+                       p: ({...props}) => <p className="mb-3 last:mb-0" {...props} />,
+                       strong: ({...props}) => <strong className="font-bold inherit" {...props} />,
+                       a: ({...props}) => <a className="underline hover:opacity-80 inherit decoration-2 underline-offset-2" target="_blank" {...props} />,
+                       code: ({...props}) => <code className={`font-mono text-sm px-1.5 py-0.5 rounded ${msg.role === 'user' ? `bg-${theme}-700/50` : (mode === 'dark' ? 'bg-black/30' : 'bg-slate-100')}`} {...props} />,
+                       pre: ({...props}) => <pre className={`p-3 rounded-xl my-2 overflow-x-auto ${msg.role === 'user' ? `bg-${theme}-800/50` : (mode === 'dark' ? 'bg-black/40' : 'bg-slate-100')}`} {...props} />
                     }}
                    >
                     {msg.text}

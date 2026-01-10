@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return new Promise<void>((resolve, reject) => {
       setTimeout(() => {
         const storedUsers = localStorage.getItem('neoflow_users');
-        let users = storedUsers ? JSON.parse(storedUsers) : [];
+        const users = storedUsers ? JSON.parse(storedUsers) : [];
 
         // Check if user already exists
         if (users.find((u: any) => u.email === email)) {
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Also update the user in the 'neoflow_users' array (mock DB)
         const storedUsers = localStorage.getItem('neoflow_users');
         if (storedUsers && user) {
-            let users = JSON.parse(storedUsers);
+            const users = JSON.parse(storedUsers);
             const userIndex = users.findIndex((u: any) => u.email === user.email);
             if (userIndex !== -1) {
                 users[userIndex] = { ...users[userIndex], name, email, avatar };

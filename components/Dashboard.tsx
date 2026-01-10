@@ -4,7 +4,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { HistoryItem, ActiveTab } from '../types';
 import { getHistory, getStats, clearHistoryLog } from '../services/historyService';
 import { 
-  LayoutDashboard, 
   Clock, 
   NotebookPen, 
   MessageSquareText, 

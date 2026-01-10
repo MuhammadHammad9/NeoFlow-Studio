@@ -63,7 +63,7 @@ export const ImageAnalysis: React.FC = () => {
         const base64 = reader.result as string;
         localStorage.setItem('gemini_vision_image', base64);
         setStorageWarning(null);
-      } catch (e) {
+      } catch {
         console.warn("Image too large for local storage");
         setStorageWarning("Image is too large to be saved for refresh. It will be lost if you switch tabs.");
       }

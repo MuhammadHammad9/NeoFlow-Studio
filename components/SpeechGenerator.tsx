@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Podcast, PlayCircle, Loader2, Volume2, RefreshCw, AlertCircle, StopCircle, Settings, Rewind, FastForward, PauseCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Podcast, PlayCircle, Loader2, Volume2, RefreshCw, AlertCircle, Settings, Rewind, FastForward, PauseCircle } from 'lucide-react';
 import { generateSpeech, getFriendlyErrorMessage } from '../services/geminiService';
 import { playAudioData, AudioPlayerResult } from '../utils/audioUtils';
 import { addToHistory } from '../services/historyService';
@@ -62,14 +62,14 @@ export const SpeechGenerator: React.FC = () => {
       try {
         audioDataRef.current.source.playbackRate.value = speed;
         audioDataRef.current.source.detune.value = pitch;
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
   }, [speed, pitch]);
 
   // Waveform Drawing
-  const drawWaveform = (currentProgressPercent: number) => {
+  const drawWaveform = useCallback((currentProgressPercent: number) => {
     const canvas = canvasRef.current;
     if (!canvas || !audioDataRef.current) return;
 
@@ -80,8 +80,6 @@ export const SpeechGenerator: React.FC = () => {
     const height = canvas.height;
     const buffer = audioDataRef.current.buffer;
     const data = buffer.getChannelData(0);
-    const step = Math.ceil(data.length / width);
-    const amp = height / 2;
 
     ctx.clearRect(0, 0, width, height);
 
@@ -129,7 +127,7 @@ export const SpeechGenerator: React.FC = () => {
     
     // Reset
     ctx.globalCompositeOperation = 'source-over';
-  };
+  }, [theme, mode]);
 
   // Resize canvas handler
   useEffect(() => {
@@ -143,7 +141,7 @@ export const SpeechGenerator: React.FC = () => {
     window.addEventListener('resize', handleResize);
     handleResize(); // Initial size
     return () => window.removeEventListener('resize', handleResize);
-  }, [progress, theme, mode]);
+  }, [progress, theme, mode, drawWaveform]);
 
   // Redraw when audio stops/starts or just to clear
   useEffect(() => {
@@ -196,7 +194,7 @@ export const SpeechGenerator: React.FC = () => {
         cancelAnimationFrame(progressRequestRef.current);
       }
     };
-  }, [isPlaying, speed]);
+  }, [isPlaying, speed, drawWaveform]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -238,7 +236,7 @@ export const SpeechGenerator: React.FC = () => {
     if (audioDataRef.current?.source) {
       try {
         audioDataRef.current.source.stop();
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }
