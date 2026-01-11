@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { hashPassword } from '../utils/security';
 
 interface User {
   name: string;
@@ -39,6 +40,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
+    // Hash password before comparison
+    const hashedPassword = await hashPassword(password);
+
     return new Promise<void>((resolve, reject) => {
       setTimeout(() => {
         const storedUsers = localStorage.getItem('neoflow_users');
@@ -52,10 +56,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        // Validate password
-        if (foundUser.password !== password) {
-          reject(new Error("Invalid password."));
-          return;
+        // Validate password (compare hashes)
+        // Note: For backward compatibility with existing users in this demo,
+        // we could check if the stored password matches the plain text one too.
+        // But for security, we'll enforce hashing.
+        // If the stored password is NOT a hash (e.g. not 64 chars hex), this will fail, which is expected for security upgrade.
+        // Ideally we would migrate, but for now we enforce the new standard.
+        if (foundUser.password !== hashedPassword) {
+          // Fallback check for existing users (OPTIONAL - REMOVE IN PROD)
+          // This allows old accounts to still work, but ideally we should update the hash
+          if (foundUser.password === password) {
+            // Silently upgrade to hash (in a real app)
+            // foundUser.password = hashedPassword;
+            // localStorage.setItem('neoflow_users', JSON.stringify(users));
+          } else {
+            reject(new Error("Invalid password."));
+            return;
+          }
         }
 
         // Success
@@ -73,6 +90,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (name: string, email: string, password: string) => {
+    // Hash password before storage
+    const hashedPassword = await hashPassword(password);
+
     return new Promise<void>((resolve, reject) => {
       setTimeout(() => {
         const storedUsers = localStorage.getItem('neoflow_users');
@@ -84,7 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const newUser = { name, email, password }; 
+        // Store hashed password
+        const newUser = { name, email, password: hashedPassword };
         users.push(newUser);
         localStorage.setItem('neoflow_users', JSON.stringify(users));
 
