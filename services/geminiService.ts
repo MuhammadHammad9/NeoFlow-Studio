@@ -1,7 +1,19 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { blobToBase64 } from "../utils/audioUtils";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization to prevent app crash when API key is not set
+let ai: GoogleGenAI | null = null;
+
+const getAI = (): GoogleGenAI => {
+  if (!ai) {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      throw new Error("API Key is not configured. Please set the GEMINI_API_KEY environment variable.");
+    }
+    ai = new GoogleGenAI({ apiKey });
+  }
+  return ai;
+};
 
 // Models
 const MODEL_THINKING = 'gemini-3-pro-preview';
@@ -73,7 +85,7 @@ export const analyzeNote = async (
       config.thinkingConfig = { thinkingBudget: 32768 };
     }
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: modelId,
       contents: { parts },
       config
@@ -105,7 +117,7 @@ export const analyzeNote = async (
 
 export const sendChatMessage = async (history: { role: string; parts: { text: string }[] }[], newMessage: string) => {
   try {
-    const chat = ai.chats.create({
+    const chat = getAI().chats.create({
       model: 'gemini-3-pro-preview',
       history: history,
     });
@@ -122,7 +134,7 @@ export const analyzeImage = async (imageFile: File, prompt: string) => {
   try {
     const base64Image = await blobToBase64(imageFile);
     
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: MODEL_IMAGE,
       contents: {
         parts: [
@@ -146,7 +158,7 @@ export const analyzeImage = async (imageFile: File, prompt: string) => {
 
 export const generateSpeech = async (text: string, voiceName: string = 'Kore') => {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: MODEL_TTS,
       contents: [{ parts: [{ text }] }],
       config: {
@@ -189,7 +201,7 @@ export const generateStudyGuide = async (content: string) => {
     
     Return strict JSON. Do NOT include markdown code blocks.`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: MODEL_FAST,
       contents: promptText,
       config: {
