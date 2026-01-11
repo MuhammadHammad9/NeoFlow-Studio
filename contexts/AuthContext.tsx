@@ -127,7 +127,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   if (isLoading) {
-    return null; 
+    // Show loading state instead of returning null to prevent blank screen
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 to-slate-900">
+        <div className="text-center">
+          <div className="w-12 h-12 mx-auto mb-4 border-3 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" 
+               style={{ borderWidth: '3px' }}></div>
+          <p className="text-slate-400 text-sm font-sans">Loading NeoFlow Studio...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
