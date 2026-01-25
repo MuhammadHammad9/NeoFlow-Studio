@@ -1,5 +1,17 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { webcrypto } from 'node:crypto';
+
+// Polyfill Web Crypto API
+Object.defineProperty(global, 'crypto', {
+  value: webcrypto,
+  writable: true
+});
+
+Object.defineProperty(window, 'crypto', {
+  value: webcrypto,
+  writable: true
+});
 
 // Mock localStorage
 const localStorageMock = {
