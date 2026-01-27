@@ -1,5 +1,12 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { webcrypto } from 'node:crypto';
+
+// Mock crypto
+Object.defineProperty(window, 'crypto', {
+  writable: true,
+  value: webcrypto,
+});
 
 // Mock localStorage
 const localStorageMock = {

@@ -17,6 +17,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper functions for crypto
+const generateSalt = () => {
+  const array = new Uint8Array(16);
+  window.crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+};
+
+const hashPassword = async (password: string, salt: string) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + salt);
+  const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,63 +54,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        const storedUsers = localStorage.getItem('neoflow_users');
-        const users = storedUsers ? JSON.parse(storedUsers) : [];
-        
-        // Find user
-        const foundUser = users.find((u: any) => u.email === email);
-        
-        if (!foundUser) {
-          reject(new Error("No account found with this email."));
-          return;
-        }
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Validate password
-        if (foundUser.password !== password) {
-          reject(new Error("Invalid password."));
-          return;
-        }
+    const storedUsers = localStorage.getItem('neoflow_users');
+    const users = storedUsers ? JSON.parse(storedUsers) : [];
 
-        // Success
-        const sessionUser = { 
-          name: foundUser.name, 
-          email: foundUser.email, 
-          avatar: foundUser.avatar 
-        };
-        localStorage.setItem('neoflow_session', JSON.stringify(sessionUser));
-        setUser(sessionUser);
-        setIsAuthenticated(true);
-        resolve();
-      }, 800); // Simulate network delay
-    });
+    // Find user
+    const foundUser = users.find((u: any) => u.email === email);
+
+    if (!foundUser) {
+      throw new Error("No account found with this email.");
+    }
+
+    // Validate password
+    let isValid = false;
+
+    if (foundUser.salt) {
+      // Secure check
+      const hash = await hashPassword(password, foundUser.salt);
+      if (hash === foundUser.password) {
+        isValid = true;
+      }
+    } else {
+      // Legacy plaintext check (and upgrade)
+      if (foundUser.password === password) {
+        isValid = true;
+        // Upgrade to salted hash
+        const salt = generateSalt();
+        const hash = await hashPassword(password, salt);
+        foundUser.password = hash;
+        foundUser.salt = salt;
+
+        // Update storage
+        const userIndex = users.findIndex((u: any) => u.email === email);
+        if (userIndex !== -1) {
+          users[userIndex] = foundUser;
+          localStorage.setItem('neoflow_users', JSON.stringify(users));
+        }
+      }
+    }
+
+    if (!isValid) {
+      throw new Error("Invalid password.");
+    }
+
+    // Success
+    const sessionUser = {
+      name: foundUser.name,
+      email: foundUser.email,
+      avatar: foundUser.avatar
+    };
+    localStorage.setItem('neoflow_session', JSON.stringify(sessionUser));
+    setUser(sessionUser);
+    setIsAuthenticated(true);
   };
 
   const register = async (name: string, email: string, password: string) => {
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        const storedUsers = localStorage.getItem('neoflow_users');
-        const users = storedUsers ? JSON.parse(storedUsers) : [];
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Check if user already exists
-        if (users.find((u: any) => u.email === email)) {
-          reject(new Error("Account with this email already exists."));
-          return;
-        }
+    const storedUsers = localStorage.getItem('neoflow_users');
+    const users = storedUsers ? JSON.parse(storedUsers) : [];
 
-        const newUser = { name, email, password }; 
-        users.push(newUser);
-        localStorage.setItem('neoflow_users', JSON.stringify(users));
+    // Check if user already exists
+    if (users.find((u: any) => u.email === email)) {
+      throw new Error("Account with this email already exists.");
+    }
 
-        // Auto-login after register
-        const sessionUser = { name, email };
-        localStorage.setItem('neoflow_session', JSON.stringify(sessionUser));
-        setUser(sessionUser);
-        setIsAuthenticated(true);
-        resolve();
-      }, 800);
-    });
+    const salt = generateSalt();
+    const hashedPassword = await hashPassword(password, salt);
+
+    const newUser = { name, email, password: hashedPassword, salt };
+    users.push(newUser);
+    localStorage.setItem('neoflow_users', JSON.stringify(users));
+
+    // Auto-login after register
+    const sessionUser = { name, email };
+    localStorage.setItem('neoflow_session', JSON.stringify(sessionUser));
+    setUser(sessionUser);
+    setIsAuthenticated(true);
   };
 
   const updateProfile = async (name: string, email: string, avatar?: string) => {
