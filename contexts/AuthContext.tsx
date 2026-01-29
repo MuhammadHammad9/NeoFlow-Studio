@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { hashPassword } from '../utils/security';
 
 interface User {
   name: string;
@@ -40,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
+      setTimeout(async () => {
         const storedUsers = localStorage.getItem('neoflow_users');
         const users = storedUsers ? JSON.parse(storedUsers) : [];
         
@@ -52,10 +53,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        // Validate password
-        if (foundUser.password !== password) {
-          reject(new Error("Invalid password."));
-          return;
+        // Validate password (check hash first, then legacy plaintext)
+        const hashedPassword = await hashPassword(password);
+
+        if (foundUser.password !== hashedPassword) {
+          // Check if it matches legacy plaintext
+          if (foundUser.password === password) {
+            // Upgrade to hash
+            foundUser.password = hashedPassword;
+            localStorage.setItem('neoflow_users', JSON.stringify(users));
+          } else {
+            reject(new Error("Invalid password."));
+            return;
+          }
         }
 
         // Success
@@ -74,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (name: string, email: string, password: string) => {
     return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
+      setTimeout(async () => {
         const storedUsers = localStorage.getItem('neoflow_users');
         const users = storedUsers ? JSON.parse(storedUsers) : [];
 
@@ -84,7 +94,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const newUser = { name, email, password }; 
+        const hashedPassword = await hashPassword(password);
+        const newUser = { name, email, password: hashedPassword };
         users.push(newUser);
         localStorage.setItem('neoflow_users', JSON.stringify(users));
 
