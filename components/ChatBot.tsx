@@ -212,7 +212,7 @@ export const ChatBot: React.FC = () => {
                     components={{
                        p: ({...props}) => <p className="mb-3 last:mb-0" {...props} />,
                        strong: ({...props}) => <strong className="font-bold inherit" {...props} />,
-                       a: ({...props}) => <a className="underline hover:opacity-80 inherit decoration-2 underline-offset-2" target="_blank" {...props} />,
+                       a: ({...props}) => <a className="underline hover:opacity-80 inherit decoration-2 underline-offset-2" target="_blank" rel="noopener noreferrer" {...props} />,
                        code: ({...props}) => <code className={`font-mono text-sm px-1.5 py-0.5 rounded ${msg.role === 'user' ? `bg-${theme}-700/50` : (mode === 'dark' ? 'bg-black/30' : 'bg-slate-100')}`} {...props} />,
                        pre: ({...props}) => <pre className={`p-3 rounded-xl my-2 overflow-x-auto ${msg.role === 'user' ? `bg-${theme}-800/50` : (mode === 'dark' ? 'bg-black/40' : 'bg-slate-100')}`} {...props} />
                     }}
